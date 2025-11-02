@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Gaya Map</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    
+    <div class="form-container">
+        <h2>Login</h2>
+        
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div class="message error">
+              {{ messages[0] }}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('login') }}">
+            {{ form.hidden_tag() }} <div>
+                {{ form.username.label }}<br>
+                {{ form.username(size=30) }}
+            </div>
+            <div>
+                {{ form.password.label }}<br>
+                {{ form.password(size=30) }}
+            </div>
+            <div>
+                {{ form.submit() }}
+            </div>
+        </form>
+        <div class="message">
+            Naye user hain? <a href="{{ url_for('register') }}">Yahan register karein</a>
+        </div>
+    </div>
+
+</body>
+</html>
