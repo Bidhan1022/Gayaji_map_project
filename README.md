@@ -1,2 +1,2 @@
 # Gayaji_map_project
-This is a minor project . This is about Gayaji map.
+This is a minor project about Gayaji map.
