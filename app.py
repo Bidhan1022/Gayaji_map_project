@@ -1,42 +1,38 @@
 # app.py
-print("DEBUG: File ke bilkul shuru mein")
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import os
-print("DEBUG: Saare imports ho gaye")
 
-# Files se import
-from models import db, User, LocationPin
-from forms import LoginForm, RegistrationForm # YAHAN import karein
-
-# App Configuration
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'bidhan-yeh-key-bahut-secret-rakhna'
-
-# Database URL config
 DATABASE_URL = os.environ.get('DATABASE_URL') 
 if DATABASE_URL:
     if DATABASE_URL.startswith("postgres://"):
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 else:
-    print("DEBUG: DATABASE_URL nahi mila, SQLite istemal kar rahe hain.")
+    # Local computer ke liye
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///gaya_map.db'
 
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 
-# 2. Ab 'db' ko import karo aur 'app' se jodo
 from models import db
 db.init_app(app)
 
-# Login Manager Setup
+# 3. Ab Login Manager ko jodo
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'login' # Agar login nahi hai toh 'login' page par bhejo
+login_manager.login_view = 'login'
 login_manager.login_message = 'Please log in to access this page.'
+# 4. Ab jab sab connect ho gaya hai, TAB Models aur Forms ko import karo
+from models import User, LocationPin
+from forms import LoginForm, RegistrationForm
+
+# --- FIX KHATAM ---
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -52,27 +48,26 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('index')) # Agar pehle se login hai toh map par bhejo
+        return redirect(url_for('index'))
 
-    form = LoginForm() # Form ko load karo
-    if form.validate_on_submit(): # Agar form submit hua aur sahi hai
+    form = LoginForm()
+    if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
         if user and check_password_hash(user.password_hash, form.password.data):
-            login_user(user) # User ko login karo
-            return redirect(url_for('index')) # Map page par bhejo
+            login_user(user)
+            return redirect(url_for('index'))
         else:
             flash('Login unsuccessful. Please check username and password.')
 
-    return render_template('login.html', form=form) # Form ko HTML mein bhejo
+    return render_template('login.html', form=form)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
 
-    form = RegistrationForm() # Register form load karo
+    form = RegistrationForm()
     if form.validate_on_submit():
-        # Check karo user pehle se toh nahi hai
         existing_user = User.query.filter_by(username=form.username.data).first()
         if existing_user:
             flash('That username is already taken. Please choose a different one.')
@@ -82,11 +77,11 @@ def register():
         new_user = User(username=form.username.data, password_hash=hashed_password)
         db.session.add(new_user)
         db.session.commit()
-
+        
         flash('Your account has been created! You can now log in.')
-        return redirect(url_for('login')) # Login page par bhejo
+        return redirect(url_for('login'))
 
-    return render_template('register.html', form=form) # Form ko HTML mein bhejo
+    return render_template('register.html', form=form)
 
 @app.route('/logout')
 @login_required
@@ -122,8 +117,7 @@ def add_pin():
     )
     db.session.add(new_pin)
     db.session.commit()
-
-    # Naye pin ka data wapas bhejo taaki JS use turant add kar sake
+    
     return jsonify({
         'message': 'Pin added!',
         'pin': {
@@ -150,16 +144,13 @@ def get_pins():
         })
     return jsonify(pin_list)
 
-print("DEBUG: 'if __name__' se thik pehle")
-#if __name__ == '__main__' block ko aisa update karein
+# --- Server Start ---
+
 if __name__ == '__main__':
-    print("DEBUG: 'if __name__' ke andar aa gaya") # <-- YEH ADD KAREIN
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
-        os.makedirs(app.config['UPLOAD_FOLDER']) # Upload folder banao agar nahi hai
+        os.makedirs(app.config['UPLOAD_FOLDER'])
     
-    # Naya tareeka: app context ke andar database create karein
     with app.app_context():
-        db.create_all()
-        print("DEBUG: Database create ho gaya") # <-- YEH BHI ADD KAREIN
-    print("DEBUG: Ab server RUN hone wala hai...") # <-- YEH BHI ADD KAREIN
-    app.run(debug=True) # Server ko start karein
+        db.create_all() # Database tables banata hai
+        
+    app.run(debug=True)
