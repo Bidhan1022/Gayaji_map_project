@@ -7,6 +7,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import os
 print("DEBUG: Saare imports ho gaye")
+print("DEBUG: YEH EK ZABARDASTI KA CHANGE HAI")
 # Files se import
 from models import db, User, LocationPin
 from forms import LoginForm, RegistrationForm # YAHAN import karein
