@@ -9,10 +9,10 @@ import os
 
 # 1. Pehle App aur Config banao
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'bidhan-yeh-key-bahut-secret-rakhna'
+app.config['SECRET_KEY'] = 'myreallystrongsecretkey12345'
 
 # Database URL config (Local aur Hosting dono ke liye)
-DATABASE_URL = os.environ.get('DATABASE_URL') 
+DATABASE_URL = os.environ.get('postgresql://gayaji_map_db_user:7us8yry8sEQVdZzKdVTshERXVjtZGAca@dpg-d43qtnumcj7s73bd3vf0-a/gayaji_map_db') 
 if DATABASE_URL:
     # Render (Hosting) ke liye
     if DATABASE_URL.startswith("postgres://"):
