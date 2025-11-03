@@ -16,22 +16,21 @@ from forms import LoginForm, RegistrationForm # YAHAN import karein
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'bidhan-yeh-key-bahut-secret-rakhna'
 
-# ✅ Database URL from environment (Render, Railway, etc.)
-DATABASE_URL = os.environ.get('DATABASE_URL')
+# Database URL config
+DATABASE_URL = os.environ.get('DATABASE_URL') 
+if DATABASE_URL:
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+else:
+    print("DEBUG: DATABASE_URL nahi mila, SQLite istemal kar rahe hain.")
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///gaya_map.db'
 
-# ✅ Fix old-style URL "postgres://" to "postgresql://"
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-
-# ✅ Set final database URI
-app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL  # <-- Ye line missing thi!
-
-# ✅ File upload folder
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 
-# ✅ Initialize SQLAlchemy properly
-db = SQLAlchemy(app)
-
+# 2. Ab 'db' ko import karo aur 'app' se jodo
+from models import db
+db.init_app(app)
 
 # Login Manager Setup
 login_manager = LoginManager()
