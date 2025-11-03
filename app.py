@@ -1,4 +1,3 @@
-# app.py
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -6,10 +5,16 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import os
 
+# --- NAYA STRUCTURE (ERROR FIX) ---
+
+# 1. Pehle App aur Config banao
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'bidhan-yeh-key-bahut-secret-rakhna'
+
+# Database URL config (Local aur Hosting dono ke liye)
 DATABASE_URL = os.environ.get('DATABASE_URL') 
 if DATABASE_URL:
+    # Render (Hosting) ke liye
     if DATABASE_URL.startswith("postgres://"):
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
@@ -19,14 +24,19 @@ else:
 
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 
+
+# 2. Ab 'db' ko import karo aur 'app' se jodo
 from models import db
 db.init_app(app)
+
 
 # 3. Ab Login Manager ko jodo
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Please log in to access this page.'
+
+
 # 4. Ab jab sab connect ho gaya hai, TAB Models aur Forms ko import karo
 from models import User, LocationPin
 from forms import LoginForm, RegistrationForm
@@ -36,7 +46,9 @@ from forms import LoginForm, RegistrationForm
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    # === YEH LINE BADAL DI GAYI HAI ===
+    return db.session.get(User, int(user_id))
+    # === WARNING FIX HO GAYI ===
 
 # --- Routes (Pages) ---
 
@@ -134,12 +146,14 @@ def add_pin():
 def get_pins():
     pins = LocationPin.query.all()
     pin_list = []
-    for pin in pins:
+    for pin in pins: # <-- Loop variable 'pin' hai
         pin_list.append({
             'name': pin.name,
             'lat': pin.lat,
             'lng': pin.lng,
+            # === YEH LINE THEEK KAR DI GAYI HAI ===
             'image_url': url_for('static', filename=f'uploads/{pin.image_filename}') if pin.image_filename else None,
+            # === 'new_pin' ko 'pin' kar diya hai ===
             'author': pin.author.username
         })
     return jsonify(pin_list)
