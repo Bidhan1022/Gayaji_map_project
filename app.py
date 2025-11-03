@@ -15,11 +15,23 @@ from forms import LoginForm, RegistrationForm # YAHAN import karein
 # App Configuration
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'bidhan-yeh-key-bahut-secret-rakhna'
+
+# ✅ Database URL from environment (Render, Railway, etc.)
 DATABASE_URL = os.environ.get('DATABASE_URL')
+
+# ✅ Fix old-style URL "postgres://" to "postgresql://"
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# ✅ Set final database URI
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL  # <-- Ye line missing thi!
+
+# ✅ File upload folder
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
-db = SQLAlchemy(app) 
+
+# ✅ Initialize SQLAlchemy properly
+db = SQLAlchemy(app)
+
 
 # Login Manager Setup
 login_manager = LoginManager()
