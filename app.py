@@ -7,7 +7,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import os
 print("DEBUG: Saare imports ho gaye")
-print("DEBUG: YEH EK ZABARDASTI KA CHANGE HAI")
+
 # Files se import
 from models import db, User, LocationPin
 from forms import LoginForm, RegistrationForm # YAHAN import karein
@@ -19,7 +19,7 @@ DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
-db.init_app(app)
+db = SQLAlchemy(app) 
 
 # Login Manager Setup
 login_manager = LoginManager()
