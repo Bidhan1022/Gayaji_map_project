@@ -1,56 +1,67 @@
+import os
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user, UserMixin
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, SubmitField
+from wtforms.validators import DataRequired, Length, EqualTo
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-import os
 
-# --- NAYA STRUCTURE (ERROR FIX) ---
-
-# 1. Pehle App aur Config banao
+# --- 1. App aur Config Setup ---
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'myreallystrongsecretkey12345'
 
-# Database URL config (Local aur Hosting dono ke liye)
-DATABASE_URL = os.environ.get('postgresql://gayaji_map_db_user:7us8yry8sEQVdZzKdVTshERXVjtZGAca@dpg-d43qtnumcj7s73bd3vf0-a/gayaji_map_db') 
-if DATABASE_URL:
-    # Render (Hosting) ke liye
-    if DATABASE_URL.startswith("postgres://"):
-        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
-else:
-    # Local computer ke liye
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///gaya_map.db'
-
+# Sirf local database ka simple config
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///gaya_map.db'
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 
-
-# 2. Ab 'db' ko import karo aur 'app' se jodo
-from models import db
-db.init_app(app)
-
-
-# 3. Ab Login Manager ko jodo
-login_manager = LoginManager()
-login_manager.init_app(app)
+# --- 2. Extensions ko App se Jodo ---
+db = SQLAlchemy(app)
+login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Please log in to access this page.'
 
+# --- 3. Models (Database Tables) ---
+# User model ko yahi define kar diya
+class User(db.Model, UserMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password_hash = db.Column(db.String(200), nullable=False)
+    # Relationship: User ne kitne Pin banaye
+    pins = db.relationship('LocationPin', backref='author', lazy=True)
 
-# 4. Ab jab sab connect ho gaya hai, TAB Models aur Forms ko import karo
-from models import User, LocationPin
-from forms import LoginForm, RegistrationForm
+# LocationPin model ko yahi define kar diya
+class LocationPin(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    lat = db.Column(db.Float, nullable=False)
+    lng = db.Column(db.Float, nullable=False)
+    image_filename = db.Column(db.String(200), nullable=True)
+    # Relationship: Pin kisne banaya (Foreign Key)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-# --- FIX KHATAM ---
+# --- 4. Forms (Login/Register Forms) ---
+# RegistrationForm ko yahi define kar diya
+class RegistrationForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired(), Length(min=4, max=25)])
+    password = PasswordField('Password', validators=[DataRequired(), Length(min=6)])
+    confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
+    submit = SubmitField('Register')
 
+# LoginForm ko yahi define kar diya
+class LoginForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    submit = SubmitField('Login')
 
+# --- 5. Login Manager ka Helper Function ---
 @login_manager.user_loader
 def load_user(user_id):
-    # === YEH LINE BADAL DI GAYI HAI ===
+    # Aapka fix kiya hua code
     return db.session.get(User, int(user_id))
-    # === WARNING FIX HO GAYI ===
 
-# --- Routes (Pages) ---
+# --- 6. Routes (Pages) ---
 
 @app.route('/')
 @login_required
@@ -62,7 +73,7 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
 
-    form = LoginForm()
+    form = LoginForm() # Form ab upar defined hai
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
         if user and check_password_hash(user.password_hash, form.password.data):
@@ -78,8 +89,9 @@ def register():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
 
-    form = RegistrationForm()
+    form = RegistrationForm() # Form ab upar defined hai
     if form.validate_on_submit():
+        # Ye check aapke original code mein tha, isliye rakha hai
         existing_user = User.query.filter_by(username=form.username.data).first()
         if existing_user:
             flash('That username is already taken. Please choose a different one.')
@@ -101,7 +113,7 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-# --- API Routes (Data ke liye) ---
+# --- 7. API Routes (Data ke liye) ---
 
 @app.route('/api/add_pin', methods=['POST'])
 @login_required
@@ -146,24 +158,24 @@ def add_pin():
 def get_pins():
     pins = LocationPin.query.all()
     pin_list = []
-    for pin in pins: # <-- Loop variable 'pin' hai
+    for pin in pins: # Aapka fix kiya hua loop variable 'pin'
         pin_list.append({
             'name': pin.name,
             'lat': pin.lat,
             'lng': pin.lng,
-            # === YEH LINE THEEK KAR DI GAYI HAI ===
             'image_url': url_for('static', filename=f'uploads/{pin.image_filename}') if pin.image_filename else None,
-            # === 'new_pin' ko 'pin' kar diya hai ===
             'author': pin.author.username
         })
     return jsonify(pin_list)
 
-# --- Server Start ---
+# --- 8. Server Start ---
 
 if __name__ == '__main__':
+    # Check karo ki 'uploads' folder hai ya nahi
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
         os.makedirs(app.config['UPLOAD_FOLDER'])
     
+    # App ke context mein database create karo
     with app.app_context():
         db.create_all() # Database tables banata hai
         
